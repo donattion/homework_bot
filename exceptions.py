@@ -1,6 +1,3 @@
-from telegram import TelegramError
-
-
 class TelegramError(Exception):
     """Ошибка в Telegram"""
 
