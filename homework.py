@@ -51,8 +51,8 @@ def get_api_answer(current_timestamp):
         raise exceptions.BadStatus('недоступность эндпоинта (код не 200)')
     try:
         return response.json()
-    except:
-        raise exceptions.NotJson('не преобразовываться в JSON')
+    except Exception as error:
+        raise exceptions.NotJson(f'не преобразовываться в JSON {error}')
 
 
 def check_response(response):
