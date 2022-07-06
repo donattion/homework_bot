@@ -1,3 +1,8 @@
+class NotJson(Exception):
+    """не преобразовываться в JSON"""
+
+    pass
+
 class BadEndPoint(Exception):
     """Ошибка в Endpoint"""
 
@@ -10,10 +15,5 @@ class BadStatus(Exception):
 
 class EmptyResponse(KeyError):
     '''Отсутсвуют необходимые ключи в ответе'''
-
-    pass
-
-class NotJson(Exception):
-    """не преобразовываться в JSON"""
 
     pass
