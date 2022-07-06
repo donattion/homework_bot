@@ -54,7 +54,6 @@ def get_api_answer(current_timestamp):
     return response.json()
 
 
-
 def check_response(response):
     """Проверка ответа API."""
     logging.info('Ответ от API получен')
@@ -121,6 +120,7 @@ def main():
                 current_timestamp = homeworks_list.get('current_date')
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
+            old_error = ''
             if error != old_error:
                 old_error = error
                 send_message(bot, message)
