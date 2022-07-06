@@ -1,8 +1,3 @@
-class TelegramError(Exception):
-    """Ошибка в Telegram"""
-
-    pass
-
 class BadEndPoint(Exception):
     """Ошибка в Endpoint"""
 
@@ -13,7 +8,12 @@ class BadStatus(Exception):
 
     pass
 
-class EmptyResponse(Exception):
+class EmptyResponse(KeyError):
     '''Отсутсвуют необходимые ключи в ответе'''
+
+    pass
+
+class NotJson(Exception):
+    """не преобразовываться в JSON"""
 
     pass

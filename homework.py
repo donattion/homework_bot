@@ -35,15 +35,9 @@ logging.basicConfig(
 
 def send_message(bot, message):
     """Отправка сообщений."""
-    try:
-        logging.info('Попытка отправки сообщения в Telegram')
-        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
-    except telegram.error.TelegramError as error:
-        raise exceptions.TelegramError(
-            f'сбой при отправке сообщения в Telegram {error}'
-        )
-    else:
-        logging.info('удачная отправка сообщения в Telegram')
+    logging.info('Попытка отправки сообщения в Telegram')
+    bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+    logging.info('удачная отправка сообщения в Telegram')
 
 
 def get_api_answer(current_timestamp):
@@ -51,11 +45,14 @@ def get_api_answer(current_timestamp):
     params = {'from_date': current_timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
-        if response.status_code != HTTPStatus.OK:
-            raise exceptions.BadStatus('недоступность эндпоинта (код не 200)')
-        return response.json()
     except Exception as error:
         raise exceptions.BadEndPoint(f'недоступность эндпоинта {error}')
+    if response.status_code != HTTPStatus.OK:
+        raise exceptions.BadStatus('недоступность эндпоинта (код не 200)')
+    if not response.json():
+        raise exceptions.NotJson('не преобразовываться в JSON')
+    return response.json()
+
 
 
 def check_response(response):
@@ -64,7 +61,7 @@ def check_response(response):
     logging.info('Начало проверки ответа API')
     if not isinstance(response, dict):
         raise TypeError('В ответе должен быть словарь')
-    if ("homeworks" or "current_date") not in response:
+    if ("homeworks" and "current_date") not in response:
         raise exceptions.EmptyResponse(
             'отсутствие ожидаемых ключей в ответе API ',
             response
@@ -78,15 +75,24 @@ def check_response(response):
 
 def parse_status(homework):
     """Извлечение статуса работы."""
-    if "homework_name" not in homework:
+    if 'homework_name' not in homework:
         raise KeyError('Отсутсвует ключ homework_name')
-    if homework['status'] not in HOMEWORK_STATUSES:
-        raise ValueError(
-            'недокументированный статус домашней работы в ответе API',
-            homework['status']
+    try:
+        homework_status = homework.get('status')
+    except Exception as error:
+        raise KeyError(
+            f'Отсутсвует ключ status: {error}'
         )
-    homework_name = homework['homework_name']
-    homework_status = homework['status']
+    if homework_status not in HOMEWORK_STATUSES:
+        raise ValueError(
+            'недокументированный статус домашней работы в ответе API'
+        )
+    try:
+        homework_name = homework.get('homework_name')
+    except Exception as error:
+        raise KeyError(
+            f'Отсутсвует ключ homework_name: {error}'
+        )
     verdict = HOMEWORK_STATUSES[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
@@ -112,10 +118,13 @@ def main():
             if homeworks:
                 message = parse_status(homeworks[0])
                 send_message(bot, message)
+                current_timestamp = homeworks_list.get('current_date')
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            send_message(bot, message)
-            logging.error(message)
+            if error != old_error:
+                old_error = error
+                send_message(bot, message)
+                logging.error(message)
         finally:
             time.sleep(RETRY_TIME)
 
