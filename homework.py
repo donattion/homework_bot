@@ -6,6 +6,7 @@ import sys
 import requests
 from dotenv import load_dotenv
 from http import HTTPStatus
+from telegram import TelegramError
 
 import telegram
 import exceptions
@@ -36,7 +37,10 @@ logging.basicConfig(
 def send_message(bot, message):
     """Отправка сообщений."""
     logging.info('Попытка отправки сообщения в Telegram')
-    bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+    try:
+        bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+    except TelegramError:
+        logging.error('Не удалось отправить сообщение')
     logging.info('удачная отправка сообщения в Telegram')
 
 
@@ -61,7 +65,7 @@ def check_response(response):
     logging.info('Начало проверки ответа API')
     if not isinstance(response, dict):
         raise TypeError('В ответе должен быть словарь')
-    if ("homeworks" and "current_date") not in response:
+    if "homeworks" not in response and "current_date" not in response:
         raise exceptions.EmptyResponse(
             'отсутствие ожидаемых ключей в ответе API ',
             response
@@ -77,22 +81,16 @@ def parse_status(homework):
     """Извлечение статуса работы."""
     if 'homework_name' not in homework:
         raise KeyError('Отсутсвует ключ homework_name')
-    try:
-        homework_status = homework.get('status')
-    except Exception as error:
+    homework_status = homework.get('status')
+    if homework_status is None:
         raise KeyError(
-            f'Отсутсвует ключ status: {error}'
+            'Отсутсвует ключ status'
         )
     if homework_status not in HOMEWORK_STATUSES:
         raise ValueError(
             'недокументированный статус домашней работы в ответе API'
         )
-    try:
-        homework_name = homework.get('homework_name')
-    except Exception as error:
-        raise KeyError(
-            f'Отсутсвует ключ homework_name: {error}'
-        )
+    homework_name = homework.get('homework_name')
     verdict = HOMEWORK_STATUSES[homework_status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
@@ -105,6 +103,7 @@ def check_tokens():
 def main():
     """Основная логика работы бота."""
     logging.info('старт работы бота')
+    old_error = ''
     if not check_tokens():
         message = "Отсутсвтует один или несколько токенов"
         logging.critical(message)
@@ -118,14 +117,15 @@ def main():
             if homeworks:
                 message = parse_status(homeworks[0])
                 send_message(bot, message)
+            current_data = homeworks_list.get('current_date')
+            if current_data is not None:
                 current_timestamp = homeworks_list.get('current_date')
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            old_error = ''
             if error != old_error:
-                old_error = error
                 send_message(bot, message)
                 logging.error(message)
+                old_error = error
         finally:
             time.sleep(RETRY_TIME)
 
