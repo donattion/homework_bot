@@ -1,6 +1,5 @@
-response = {'homeworks': 'home', 'current_date': 'date'}
-
-if "homeworks" in response and "current_date" in response:
-    print(True)
+response = {"homeworks":"value"}
+if "homeworks" not in response or "current_date" not in response:
+    print("Не найден ключ")
 else:
-    print(False)
+    print('ключ найден')

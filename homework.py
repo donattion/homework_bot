@@ -65,7 +65,7 @@ def check_response(response):
     logging.info('Начало проверки ответа API')
     if not isinstance(response, dict):
         raise TypeError('В ответе должен быть словарь')
-    if "homeworks" not in response and "current_date" not in response:
+    if "homeworks" not in response or "current_date" not in response:
         raise exceptions.EmptyResponse(
             'отсутствие ожидаемых ключей в ответе API ',
             response
@@ -82,7 +82,7 @@ def parse_status(homework):
     if 'homework_name' not in homework:
         raise KeyError('Отсутсвует ключ homework_name')
     homework_status = homework.get('status')
-    if homework_status is None:
+    if 'status' not in homework:
         raise KeyError(
             'Отсутсвует ключ status'
         )
@@ -117,9 +117,10 @@ def main():
             if homeworks:
                 message = parse_status(homeworks[0])
                 send_message(bot, message)
-            current_data = homeworks_list.get('current_date')
-            if current_data is not None:
-                current_timestamp = homeworks_list.get('current_date')
+            current_timestamp = homeworks_list.get(
+                'current_date',
+                current_timestamp
+            )
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             if error != old_error:
